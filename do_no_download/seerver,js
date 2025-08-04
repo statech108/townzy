@@ -1,0 +1,48 @@
+// server.js
+const express = require('express');
+const cors = require('cors');
+const db = require('./db');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Health check
+app.get('/', (req, res) => res.json({ ok: true }));
+
+// Example: create users table
+app.post('/init', (req, res) => {
+  const sql = `
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      password VARCHAR(100) NOT NULL
+    )`;
+  db.query(sql, (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'users table ready' });
+  });
+});
+
+// Register user (simplified)
+app.post('/register', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Missing fields' });
+  db.query('INSERT INTO users (username, password) VALUES (?, ?)', [username, password], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'registered' });
+  });
+});
+
+// List users
+app.get('/users', (req, res) => {
+  db.query('SELECT id, username FROM users', (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.listen(PORT, () => console.log(`➡️ Server running on port ${PORT}`));
